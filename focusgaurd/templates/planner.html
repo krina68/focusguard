@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Study Planner — FocusGuard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Study Planner</h1>
+    <p class="page-sub">Organize your subjects, track deadlines, auto-generate your timetable.</p>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-row">
+  <button class="tab-btn active" onclick="switchTab('planner', this)">📚 Study Planner</button>
+  <button class="tab-btn" onclick="switchTab('timetable', this)">📅 Weekly Timetable</button>
+</div>
+
+<!-- ── Tab 1: Planner ── -->
+<div class="tab-pane" id="tab-planner">
+
+  <!-- Add subject form -->
+  <div class="card">
+    <h2 class="card-title" style="margin-bottom:20px;">Add Subject</h2>
+    <form method="POST" action="/planner/add" class="planner-form">
+      <div class="field-group">
+        <label>Subject Name</label>
+        <input type="text" name="subject" placeholder="e.g. Mathematics" required>
+      </div>
+      <div class="planner-form-row">
+        <div class="field-group">
+          <label>Exam Date</label>
+          <input type="date" name="exam_date" required min="{{ now }}">
+        </div>
+        <div class="field-group">
+          <label>Daily Hours</label>
+          <input type="number" name="daily_hours" value="2" min="0.5" max="12" step="0.5">
+        </div>
+        <div class="field-group">
+          <label>Color</label>
+          <input type="color" name="color" value="#4493f8" class="color-input">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">+ Add Subject</button>
+    </form>
+  </div>
+
+  {% if plans %}
+  <!-- Subjects list -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Your Subjects</h2>
+      <form method="POST" action="/planner/generate" style="margin:0;">
+        <button type="submit" class="btn btn-primary">⚡ Generate Timetable</button>
+      </form>
+    </div>
+
+    <div class="plans-list">
+      {% for p in plans %}
+      <div class="plan-item" style="border-left-color: {{ p.color }};">
+        <div class="plan-left">
+          <div class="plan-subject" style="color: {{ p.color }};">{{ p.subject }}</div>
+          <div class="plan-meta">
+            Exam: <strong>{{ p.exam_date }}</strong> ·
+            {{ p.daily_hours }}h/day ·
+            <span class="urgency-tag {% if p.days_left <= 7 %}urgent{% elif p.days_left <= 14 %}warning{% else %}safe{% endif %}">
+              {% if p.days_left == 0 %}TODAY
+              {% elif p.days_left == 1 %}Tomorrow
+              {% else %}{{ p.days_left }} days left
+              {% endif %}
+            </span>
+          </div>
+        </div>
+
+        <!-- Mini schedule strip -->
+        <div class="plan-schedule-strip">
+          {% if p.id in schedules %}
+          {% for day in schedules[p.id][:7] %}
+          <div class="strip-day {% if day.weekday in ['Saturday','Sunday'] %}weekend{% endif %}" title="{{ day.label }}">
+            <div class="strip-dot" style="background: {{ p.color }};"></div>
+            <div class="strip-label">{{ day.label[:3] }}</div>
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+
+        <button class="icon-btn danger" onclick="deletePlan({{ p.id }}, this)" title="Delete">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📅</div>
+    <h3>No subjects yet</h3>
+    <p>Add your first subject above to start planning your study schedule.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Tab 2: Timetable ── -->
+<div class="tab-pane" id="tab-timetable" style="display:none;">
+
+  {% if timetable %}
+  <div class="timetable-wrap">
+    <div class="tt-legend">
+      {% set seen = [] %}
+      {% for row in timetable %}
+        {% if row.subject not in seen %}
+          {% set _ = seen.append(row.subject) %}
+          <span class="tt-legend-item">
+            <span class="tt-legend-dot" style="background:{{ row.color }};"></span>
+            {{ row.subject }}
+          </span>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="tt-grid">
+      {% set days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+      {% for day in days %}
+      <div class="tt-col">
+        <div class="tt-col-header">{{ day[:3].upper() }}<span class="tt-full-day">{{ day[3:] }}</span></div>
+        {% set day_entries = timetable | selectattr('day', 'equalto', day) | list %}
+        {% if day_entries %}
+          {% for entry in day_entries %}
+          <div class="tt-block" style="border-color: {{ entry.color }}; background: {{ entry.color }}18;">
+            <div class="tt-time">{{ entry.time_slot }}</div>
+            <div class="tt-subj" style="color: {{ entry.color }};">{{ entry.subject }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="tt-empty">—</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="margin-top:16px; display:flex; gap:12px; justify-content:flex-end;">
+    <form method="POST" action="/planner/generate">
+      <button type="submit" class="btn btn-outline">↺ Regenerate</button>
+    </form>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📅</div>
+    <h3>No timetable generated yet</h3>
+    <p>Add subjects in the Planner tab, then click "Generate Timetable".</p>
+    <button class="btn btn-primary" onclick="switchTab('planner', document.querySelector('.tab-btn'))">Go to Planner</button>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).style.display = 'block';
+  btn.classList.add('active');
+}
+
+async function deletePlan(id, btn) {
+  if (!confirm('Remove this subject?')) return;
+  const res = await fetch(`/planner/delete/${id}`, {method:'POST'});
+  if ((await res.json()).success) {
+    btn.closest('.plan-item').style.opacity = '0';
+    setTimeout(() => btn.closest('.plan-item').remove(), 300);
+  }
+}
+</script>
+{% endblock %}

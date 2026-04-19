@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — FocusGuard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-sub">{{ user.last_study_date or 'No sessions yet' }} · {{ user.streak }} day streak</p>
+  </div>
+  <a href="/timer" class="btn btn-primary">▶ Start Session</a>
+</div>
+
+<!-- Stat cards -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Total Sessions</div>
+    <div class="stat-value mono">{{ total_sessions }}</div>
+    <div class="stat-sub">focus sessions completed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Hours Studied</div>
+    <div class="stat-value mono">{{ total_hours }}</div>
+    <div class="stat-sub">{{ total_minutes }} minutes total</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Focus Points</div>
+    <div class="stat-value mono accent-text">{{ user.points }}</div>
+    <div class="stat-sub">10 + min per session</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Study Notes</div>
+    <div class="stat-value mono">{{ total_notes }}</div>
+    <div class="stat-sub"><a href="/notes">View all notes →</a></div>
+  </div>
+</div>
+
+<!-- Chart + badges row -->
+<div class="dash-grid">
+
+  <!-- Analytics chart -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Study Analytics</h2>
+      <span class="card-badge">Last 7 days</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="studyChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- Streak + quick actions -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Quick Actions</h2>
+    </div>
+    <div class="quick-actions">
+      <a href="/timer" class="qa-btn qa-focus">
+        <span>⏱</span>
+        <div><strong>Start Timer</strong><small>Begin a focus session</small></div>
+      </a>
+      <a href="/block" class="qa-btn qa-block">
+        <span>🔒</span>
+        <div><strong>Block Sites</strong><small>30-min social media block</small></div>
+      </a>
+      <a href="/notes" class="qa-btn qa-notes">
+        <span>📝</span>
+        <div><strong>New Note</strong><small>Open your note station</small></div>
+      </a>
+      <a href="/planner" class="qa-btn qa-plan">
+        <span>📅</span>
+        <div><strong>Planner</strong><small>Generate timetable</small></div>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Badges -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Achievement Badges</h2>
+    <span class="card-badge">
+      {{ all_badges | selectattr('earned') | list | length }} / {{ all_badges | length }} earned
+    </span>
+  </div>
+  <div class="badges-grid">
+    {% for badge in all_badges %}
+    <div class="badge-item {% if not badge.earned %}badge-locked{% endif %}">
+      <div class="badge-icon">{{ badge.icon if badge.earned else '🔒' }}</div>
+      <div class="badge-name">{{ badge.name }}</div>
+      <div class="badge-desc">{{ badge.desc }}</div>
+      {% if badge.earned %}
+      <div class="badge-earned-tag">Earned</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const res  = await fetch('/api/analytics');
+  const data = await res.json();
+  const ctx  = document.getElementById('studyChart').getContext('2d');
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+  Chart.defaults.color = isDark ? '#8b949e' : '#6b7280';
+  Chart.defaults.borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.label),
+      datasets: [{
+        label: 'Minutes studied',
+        data: data.map(d => d.minutes),
+        backgroundColor: data.map(d => d.minutes > 0 ? 'rgba(68,147,248,0.7)' : 'rgba(68,147,248,0.15)'),
+        borderColor: '#4493f8',
+        borderWidth: 2,
+        borderRadius: 6,
+      }, {
+        label: 'Sessions',
+        data: data.map(d => d.sessions * 10),
+        backgroundColor: 'rgba(63,185,80,0.2)',
+        borderColor: '#3fb950',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        type: 'line',
+        yAxisID: 'y',
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#3fb950',
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, padding: 16, font: { family: 'DM Mono', size: 11 }}},
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? ` ${ctx.parsed.y} min`
+              : ` ${ctx.parsed.y / 10} sessions`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' } }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

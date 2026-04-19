@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ user.theme if user else 'dark' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}FocusGuard{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+{% if user %}
+<!-- ── Sidebar layout ── -->
+<div class="app-layout">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-dot"></span>
+      <span>FocusGuard</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">
+        <span class="nav-icon">⬛</span> Dashboard
+      </a>
+      <a href="/timer" class="nav-link {% if request.path == '/timer' %}active{% endif %}">
+        <span class="nav-icon">⏱</span> Timer
+      </a>
+      <a href="/notes" class="nav-link {% if request.path == '/notes' %}active{% endif %}">
+        <span class="nav-icon">📝</span> Notes
+      </a>
+      <a href="/planner" class="nav-link {% if request.path == '/planner' %}active{% endif %}">
+        <span class="nav-icon">📅</span> Planner
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.username[0].upper() }}</div>
+        <div>
+          <div class="user-name">{{ user.username }}</div>
+          <div class="user-pts">{{ user.points }} pts · {{ user.streak }}d streak</div>
+        </div>
+      </div>
+      <div class="sidebar-actions">
+        <button class="icon-btn" id="themeBtn" title="Toggle theme">☀</button>
+        <a href="/logout" class="icon-btn" title="Logout">⏻</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Mobile hamburger -->
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+
+  <main class="main-content">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        <div class="flash-wrap">
+          {% for cat, msg in msgs %}
+            <div class="flash flash-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+{% else %}
+<!-- ── Non-authenticated layout ── -->
+<header class="pub-header">
+  <a href="/" class="pub-logo"><span class="logo-dot"></span>FocusGuard</a>
+  <nav class="pub-nav">
+    <a href="/login">Sign In</a>
+    <a href="/register" class="btn btn-sm btn-primary">Get Started</a>
+  </nav>
+</header>
+
+<div class="pub-content">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+      <div class="flash-wrap" style="max-width:480px;margin:0 auto 16px;">
+        {% for cat, msg in msgs %}
+          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  
+  {{ self.content() }}
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/script.js"></script>
+<script>
+// Theme toggle
+const themeBtn = document.getElementById('themeBtn');
+if (themeBtn) {
+  themeBtn.addEventListener('click', () => {
+    const html  = document.documentElement;
+    const theme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', theme);
+    themeBtn.textContent = theme === 'dark' ? '☀' : '🌙';
+    fetch('/api/theme', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({theme})});
+  });
+  const current = document.documentElement.getAttribute('data-theme');
+  themeBtn.textContent = current === 'dark' ? '☀' : '🌙';
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Auto-dismiss flashes
+setTimeout(() => {
+  document.querySelectorAll('.flash').forEach(el => el.style.opacity = '0');
+}, 4000);
+</script>
+</body>
+</html>

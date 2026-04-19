@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Focus Timer — FocusGuard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Focus Timer</h1>
+    <p class="page-sub">Stay in the zone — track, block, and earn.</p>
+  </div>
+</div>
+
+<div class="timer-layout">
+
+  <!-- ── Left: Timer ── -->
+  <div class="timer-main card">
+
+    <!-- Preset pills -->
+    <div class="preset-row">
+      <button class="preset-pill active" onclick="selectPreset(this,25,5)">25/5</button>
+      <button class="preset-pill" onclick="selectPreset(this,50,10)">50/10</button>
+      <button class="preset-pill" onclick="selectPreset(this,90,15)">90/15</button>
+      <button class="preset-pill custom-pill" onclick="toggleCustom()">Custom</button>
+    </div>
+
+    <!-- Custom inputs -->
+    <div class="custom-inputs" id="customInputs" style="display:none;">
+      <div class="custom-field">
+        <label>Focus (min)</label>
+        <input type="number" id="cFocus" value="25" min="1" max="180">
+      </div>
+      <div class="custom-field">
+        <label>Break (min)</label>
+        <input type="number" id="cBreak" value="5" min="1" max="60">
+      </div>
+      <button class="btn btn-outline" onclick="applyCustom()">Apply</button>
+    </div>
+
+    <!-- Ring -->
+    <div class="ring-container">
+      <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
+        <circle class="ring-track" cx="130" cy="130" r="115"/>
+        <circle class="ring-fill" id="ring" cx="130" cy="130" r="115"/>
+      </svg>
+      <div class="ring-inner">
+        <div class="timer-digits" id="timerDigits">25:00</div>
+        <div class="timer-phase" id="timerPhase">FOCUS</div>
+        <div class="timer-sub-label" id="timerSubLabel">session 1/4</div>
+      </div>
+    </div>
+
+    <!-- Session dots -->
+    <div class="session-dots">
+      <span class="sdot" id="sd1"></span>
+      <span class="sdot" id="sd2"></span>
+      <span class="sdot" id="sd3"></span>
+      <span class="sdot" id="sd4"></span>
+    </div>
+
+    <!-- Distraction counter -->
+    <div class="distraction-row">
+      <button class="dist-btn" onclick="addDistraction()" title="I got distracted">
+        <span>📵</span> Distracted
+      </button>
+      <div class="dist-count">
+        <span class="mono" id="distractionCount">0</span>
+        <small>distractions</small>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="timer-controls">
+      <button class="btn btn-primary btn-lg" id="startBtn" onclick="startTimer()">▶ Start</button>
+      <button class="btn btn-outline btn-lg"  id="pauseBtn" onclick="pauseTimer()" style="display:none;">⏸ Pause</button>
+      <button class="btn btn-ghost btn-lg"    onclick="resetTimer()">↺ Reset</button>
+    </div>
+
+    <!-- Block sites toggle -->
+    <div class="block-toggle-row">
+      <label class="toggle-label">
+        <input type="checkbox" id="blockToggle" checked>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        Auto-block social media
+      </label>
+    </div>
+
+  </div>
+
+  <!-- ── Right panel ── -->
+  <div class="timer-side">
+
+    <!-- Music Player -->
+    <div class="card music-card">
+      <div class="card-header"><h2 class="card-title">🎵 Focus Music</h2></div>
+      <div class="music-options">
+        <button class="music-btn active" data-type="off"     onclick="setMusic(this,'off')">Off</button>
+        <button class="music-btn"        data-type="rain"    onclick="setMusic(this,'rain')">🌧 Rain</button>
+        <button class="music-btn"        data-type="ocean"   onclick="setMusic(this,'ocean')">🌊 Ocean</button>
+        <button class="music-btn"        data-type="white"   onclick="setMusic(this,'white')">⬜ White</button>
+        <button class="music-btn"        data-type="lofi"    onclick="setMusic(this,'lofi')">🎵 Lo-fi</button>
+        <button class="music-btn"        data-type="forest"  onclick="setMusic(this,'forest')">🌲 Forest</button>
+      </div>
+      <div class="volume-row">
+        <span>🔈</span>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.4" oninput="setVolume(this.value)">
+        <span>🔊</span>
+      </div>
+    </div>
+
+    <!-- Ringtone selector -->
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">🔔 Ringtone</h2></div>
+      <div class="ringtone-options">
+        <label class="rt-option">
+          <input type="radio" name="ringtone" value="bell" checked onchange="saveRingtone('bell')">
+          <span>🔔 Bell</span>
+        </label>
+        <label class="rt-option">
+          <input type="radio" name="ringtone" value="chime" onchange="saveRingtone('chime')">
+          <span>🎐 Chime</span>
+        </label>
+        <label class="rt-option">
+          <input type="radio" name="ringtone" value="digital" onchange="saveRingtone('digital')">
+          <span>📟 Digital</span>
+        </label>
+        <label class="rt-option">
+          <input type="radio" name="ringtone" value="gentle" onchange="saveRingtone('gentle')">
+          <span>🌸 Gentle</span>
+        </label>
+      </div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:8px;" onclick="previewAlarm()">▶ Preview</button>
+    </div>
+
+    <!-- Daily Reminder -->
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">⏰ Daily Reminder</h2></div>
+      <div class="field-group">
+        <label>Remind me at</label>
+        <input type="time" id="reminderTime" value="{{ reminder.reminder_time if reminder else '08:00' }}">
+      </div>
+      <div class="field-group">
+        <label>Message</label>
+        <input type="text" id="reminderMsg" placeholder="Time to study!" value="{{ reminder.message if reminder else '' }}">
+      </div>
+      <label class="toggle-label" style="margin-bottom:12px;">
+        <input type="checkbox" id="reminderEnabled" {% if not reminder or reminder.enabled %}checked{% endif %}>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        Enable reminder
+      </label>
+      <button class="btn btn-primary" style="width:100%;" onclick="saveReminder()">Save Reminder</button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Badge popup -->
+<div class="badge-popup" id="badgePopup" style="display:none;">
+  <div class="badge-popup-inner">
+    <div class="bp-icon" id="bpIcon"></div>
+    <div class="bp-title" id="bpTitle"></div>
+    <div class="bp-desc" id="bpDesc"></div>
+    <button onclick="document.getElementById('badgePopup').style.display='none'">Dismiss</button>
+  </div>
+</div>
+
+{% endblock %}

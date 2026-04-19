@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Note Station — FocusGuard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Note Station</h1>
+    <p class="page-sub">{{ notes | length }} note{{ 's' if notes | length != 1 else '' }}</p>
+  </div>
+  <button class="btn btn-primary" onclick="openNewNote()">+ New Note</button>
+</div>
+
+<!-- Search bar -->
+<div class="notes-search-wrap">
+  <input type="text" id="noteSearch" placeholder="Search notes..." oninput="filterNotes(this.value)" class="notes-search">
+</div>
+
+<!-- Color filter -->
+<div class="color-filter">
+  <button class="cf-btn active" onclick="filterByColor('', this)">All</button>
+  <button class="cf-btn" onclick="filterByColor('#4493f8', this)" style="background:#4493f8;"></button>
+  <button class="cf-btn" onclick="filterByColor('#3fb950', this)" style="background:#3fb950;"></button>
+  <button class="cf-btn" onclick="filterByColor('#e3b341', this)" style="background:#e3b341;"></button>
+  <button class="cf-btn" onclick="filterByColor('#bc8cff', this)" style="background:#bc8cff;"></button>
+  <button class="cf-btn" onclick="filterByColor('#f778ba', this)" style="background:#f778ba;"></button>
+  <button class="cf-btn" onclick="filterByColor('#ff7b72', this)" style="background:#ff7b72;"></button>
+</div>
+
+<!-- Notes grid -->
+<div class="notes-grid" id="notesGrid">
+{% if notes %}
+  {% for note in notes %}
+  <div class="note-card" id="note-{{ note.id }}" data-color="{{ note.color }}" data-title="{{ note.title | lower }}" data-content="{{ note.content | lower }}" style="border-top-color: {{ note.color }};">
+    <div class="note-color-bar" style="background: {{ note.color }};"></div>
+    <div class="note-body">
+      <div class="note-title" contenteditable="true" data-id="{{ note.id }}" onblur="saveNote({{ note.id }})">{{ note.title }}</div>
+      <div class="note-content" contenteditable="true" data-id="{{ note.id }}" onblur="saveNote({{ note.id }})">{{ note.content }}</div>
+    </div>
+    <div class="note-footer">
+      <span class="note-date">{{ note.updated_at[:10] }}</span>
+      <div class="note-actions">
+        <div class="color-picker-wrap">
+          <button class="note-act-btn" onclick="toggleColorPicker({{ note.id }})">🎨</button>
+          <div class="color-picker" id="cp-{{ note.id }}" style="display:none;">
+            {% for c in ['#4493f8','#3fb950','#e3b341','#bc8cff','#f778ba','#ff7b72','#39d353'] %}
+            <span class="cp-dot" style="background:{{ c }};" onclick="changeNoteColor({{ note.id }}, '{{ c }}')"></span>
+            {% endfor %}
+          </div>
+        </div>
+        <button class="note-act-btn note-del" onclick="deleteNote({{ note.id }})">🗑</button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">📝</div>
+    <h3>No notes yet</h3>
+    <p>Click "New Note" to capture your first study note.</p>
+  </div>
+{% endif %}
+</div>
+
+<!-- New Note Modal -->
+<div class="modal-overlay" id="noteModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>New Note</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="field-group">
+      <label>Title</label>
+      <input type="text" id="newTitle" placeholder="Note title..." maxlength="100">
+    </div>
+    <div class="field-group">
+      <label>Content</label>
+      <textarea id="newContent" placeholder="Write your study notes here..." rows="6"></textarea>
+    </div>
+    <div class="field-group">
+      <label>Color</label>
+      <div class="color-row" id="modalColors">
+        {% for c in ['#4493f8','#3fb950','#e3b341','#bc8cff','#f778ba','#ff7b72','#39d353'] %}
+        <span class="cp-dot {% if loop.first %}selected{% endif %}" style="background:{{ c }};" data-color="{{ c }}" onclick="selectModalColor(this, '{{ c }}')"></span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createNote()">Create Note</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Create Account — FocusGuard{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="logo-dot"></span> FocusGuard</div>
+    <h2>Create account</h2>
+    <p class="auth-sub">Join thousands of students studying smarter.</p>
+    <form method="POST" class="auth-form">
+      <div class="field-group">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="choose_a_username" required autocomplete="username">
+      </div>
+      <div class="field-group">
+        <label>Password <span style="font-weight:400;font-size:0.75rem;opacity:0.5;">(min 6 chars)</span></label>
+        <input type="password" name="password" placeholder="••••••••" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+    </form>
+    <p class="auth-link">Already have an account? <a href="/login">Sign in</a></p>
+  </div>
+</div>
+{% endblock %}
